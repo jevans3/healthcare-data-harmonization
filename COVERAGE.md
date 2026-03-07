@@ -63,8 +63,12 @@ Account, AllergyIntolerance, Appointment, Bundle, Condition, Coverage, Diagnosti
 
 - Repeating segments (e.g., `NK1[]`, `DG1[]`, `OBX[]`)
 - Segment groups (PATIENT_RESULT, ORDER_OBSERVATION, INSURANCE, PROCEDURE)
+- Deep nested component/subcomponent access (e.g., `CX.4.3`, `PID.6[*].2[]`)
+- OBX multi-valued observations via `component[]` arrays
 - PV1-2 "N" (not applicable) skip logic to avoid creating empty Encounter resources
+- MSH.6 cardinality change handling (1 vs * between HL7v2 versions)
 - Conditional resource creation based on segment presence
+- NULL/empty value handling with sensible defaults (e.g., `status: "unknown"`, `active: true`)
 - Code harmonization/translation via 26 value set mapping tables
 
 ## Edge Cases Not Handled
@@ -105,8 +109,25 @@ S15-S26
 
 ### Missing HL7v2 Segments
 
-ROL (Role), RXD (Pharmacy Dispense), RXO (Pharmacy Order), RXC (Pharmacy Component), FT1 (Financial Transaction), ACC (Accident), UB1/UB2 (Universal Billing), MRG (Merge - partial in ADT_A18/A47), PDA (Patient Death), DB1 (Disability), RF1 (Referral), AUT (Authorization)
+ROL (Role), RXD (Pharmacy Dispense), RXO (Pharmacy Order), RXC (Pharmacy Component), FT1 (Financial Transaction), ACC (Accident), UB1/UB2 (Universal Billing), MRG (Merge - partial in ADT_A18/A47), PDA (Patient Death), DB1 (Disability), RF1 (Referral), AUT (Authorization), PV2 (Patient Visit Additional), IN2/IN3 (Insurance Additional)
 
 ### Missing FHIR R4 Resources (not produced from HL7v2)
 
 CarePlan, CareTeam, Claim, ClaimResponse, Consent, Device, DeviceRequest, DocumentReference, ExplanationOfBenefit, FamilyMemberHistory, Flag, HealthcareService, MedicationDispense, MedicationStatement, NutritionOrder, PractitionerRole, QuestionnaireResponse, Schedule, Slot, Task
+
+### Incomplete Terminology Mappings
+
+Several fields use hard-coded defaults or lack full ConceptMap coverage:
+
+- PID.15 (Communication Language)
+- PV1.4 (Admission Type)
+- PV1.10 (Hospital Service)
+- PR1.6 (Procedure Category)
+- DG1.6 (Diagnosis Type)
+- Observation category defaults to "laboratory"
+- Procedure status defaults to "unknown"
+- Coverage status defaults to "active"
+
+### Known TODOs in Code
+
+- NTE segment parser has a known investigation issue (`mappings/hl7v2_fhir_r4/mappings/datatypes/NTE.wstl`)
