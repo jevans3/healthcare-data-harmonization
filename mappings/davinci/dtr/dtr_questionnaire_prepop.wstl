@@ -1,0 +1,81 @@
+package dtr
+
+// Description: Da Vinci DTR v2.1 Questionnaire pre-population logic
+//
+// Pre-populates questionnaire answers from patient clinical data.
+// Used by the fhir-server QuestionnaireProvider for $questionnaire-package.
+//
+// Input:
+//   Patient context data (demographics, conditions, medications, coverage)
+//
+// Output:
+//   QuestionnaireResponse with pre-populated answers
+//
+// In production, CQL Libraries define the pre-population logic.
+// This mapping provides a Whistle-based fallback for common fields.
+
+def DTR_Prepopulate(patientContext) {
+  resourceType: "QuestionnaireResponse"
+  status: "in-progress"
+
+  // Pre-populate patient demographics
+  if patientContext.patient then {
+    item[]: DTR_Prepop_Demographics(patientContext.patient)
+  }
+
+  // Pre-populate insurance/coverage info
+  if patientContext.coverage then {
+    item[]: DTR_Prepop_Coverage(patientContext.coverage)
+  }
+
+  // Pre-populate provider info
+  if patientContext.provider then {
+    item[]: DTR_Prepop_Provider(patientContext.provider)
+  }
+}
+
+def DTR_Prepop_Demographics(patient) {
+  linkId: "patient-demographics"
+  text: "Patient Demographics"
+  item[0].linkId: "patient-name"
+  item[0].text: "Patient Name"
+  item[0].answer[0].valueString: patient.name[0].text
+  item[1].linkId: "patient-dob"
+  item[1].text: "Date of Birth"
+  item[1].answer[0].valueDate: patient.birthDate
+  item[2].linkId: "patient-gender"
+  item[2].text: "Gender"
+  item[2].answer[0].valueString: patient.gender
+  if patient.address then {
+    item[3].linkId: "patient-address"
+    item[3].text: "Address"
+    item[3].answer[0].valueString: patient.address[0].text
+  }
+}
+
+def DTR_Prepop_Coverage(coverage) {
+  linkId: "insurance-info"
+  text: "Insurance Information"
+  item[0].linkId: "plan-name"
+  item[0].text: "Plan Name"
+  item[0].answer[0].valueString: coverage.type.text
+  item[1].linkId: "member-id"
+  item[1].text: "Member ID"
+  item[1].answer[0].valueString: coverage.identifier[0].value
+  item[2].linkId: "group-number"
+  item[2].text: "Group Number"
+  if coverage.class then {
+    item[2].answer[0].valueString: coverage.class[0].value
+  }
+}
+
+def DTR_Prepop_Provider(provider) {
+  linkId: "provider-info"
+  text: "Provider Information"
+  item[0].linkId: "provider-name"
+  item[0].text: "Provider Name"
+  item[0].answer[0].valueString: provider.name[0].text
+  item[1].linkId: "provider-npi"
+  item[1].text: "NPI"
+  item[1].answer[0].valueString: provider.identifier[0].value
+}

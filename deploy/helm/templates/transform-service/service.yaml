@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-transform-service
+  labels:
+    app: transform-service
+spec:
+  type: {{ .Values.transformService.service.type }}
+  ports:
+    - port: {{ .Values.transformService.service.port }}
+      targetPort: 8081
+      protocol: TCP
+      name: http
+  selector:
+    app: transform-service

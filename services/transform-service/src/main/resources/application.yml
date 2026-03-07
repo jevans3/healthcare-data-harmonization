@@ -1,0 +1,37 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: transform-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+
+# Mapping file paths
+mappings:
+  base-path: ${MAPPINGS_BASE_PATH:mappings}
+  tenant-override-path: ${MAPPINGS_TENANT_PATH:mappings/tenants}
+
+# Actuator endpoints for Prometheus scraping and health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: transform-service
+    export:
+      prometheus:
+        enabled: true
+
+# Multi-tenancy (override per environment)
+multitenancy:
+  tenants: []
+
+# Security (disable for local dev, enable in production)
+spring.security.oauth2.resourceserver.jwt:
+  issuer-uri: ${OAUTH2_ISSUER_URI:https://auth.example.com}

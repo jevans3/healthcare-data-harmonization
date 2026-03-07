@@ -1,0 +1,61 @@
+package segments
+
+// Description: Constructs a FHIR R4 Claim and ChargeItem Resources based on V2 FT1 Segment
+//
+// Argument(s):
+//   FT1 V2 Segment (Financial Transaction)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//   EncounterReference already constructed through PV1_Encounter Projector
+//
+// Output(s):
+//   Claim: https://www.hl7.org/fhir/claim.html
+//   ChargeItem: https://www.hl7.org/fhir/chargeitem.html
+//
+// Required for: BAR_P01, DFT_P03 message types (billing/financial)
+//
+def FT1_Claim(required FT1, PatientReference, EncounterReference) {
+  identifier[]: datatypes::Build_Identifier("", FT1.1, "http://terminology.hl7.org/CodeSystem/v2-0203")
+  identifier[].type.text: if FT1.1 then "Transaction ID"
+  status: "active"
+  use: "claim"
+  type: datatypes::CWE_CodeableConcept(FT1.7)
+  patient: PatientReference
+  created: utilities::Convert_DateTime(FT1.4)
+  if EncounterReference then {
+    item[0].encounter[]: EncounterReference
+  }
+  item[0].sequence: 1
+  item[0].productOrService: datatypes::CWE_CodeableConcept(FT1.25)
+  if !FT1.25 then {
+    item[0].productOrService: datatypes::CWE_CodeableConcept(FT1.7)
+  }
+  item[0].quantity.value: if FT1.10 then tryParseNum(FT1.10)
+  item[0].unitPrice.value: if FT1.11 then tryParseNum(FT1.11.1)
+  item[0].unitPrice.currency: if FT1.11.2 then FT1.11.2 else "USD"
+  if FT1.20 then {
+    provider: utilities::OutputResourceAndGetReference(datatypes::XCN_Practitioner(FT1.20[0]))
+  }
+  if FT1.21 then {
+    facility: utilities::OutputResourceAndGetReference(datatypes::PL_Location(FT1.21))
+  }
+  resourceType: "Claim"
+}
+
+def FT1_ChargeItem(required FT1, PatientReference, EncounterReference) {
+  identifier[]: datatypes::Build_Identifier("", FT1.1, "http://terminology.hl7.org/CodeSystem/v2-0203")
+  status: "billable"
+  code: datatypes::CWE_CodeableConcept(FT1.25)
+  if !FT1.25 then {
+    code: datatypes::CWE_CodeableConcept(FT1.7)
+  }
+  subject: PatientReference
+  context: EncounterReference
+  occurrenceDateTime: utilities::Convert_DateTime(FT1.4)
+  quantity.value: if FT1.10 then tryParseNum(FT1.10)
+  priceOverride.value: if FT1.11 then tryParseNum(FT1.11.1)
+  priceOverride.currency: if FT1.11.2 then FT1.11.2 else "USD"
+  if FT1.20 then {
+    performer[0].actor: utilities::OutputResourceAndGetReference(datatypes::XCN_Practitioner(FT1.20[0]))
+  }
+  resourceType: "ChargeItem"
+}

@@ -1,0 +1,78 @@
+package messages
+
+// Description: Define RDS_O13 HL7v2 (version 2.9) to FHIR R4 transformation
+//
+// Argument(s):
+//   RDS_O13 HL7v2 Message Type (version 2.9)
+//   RDS_O13 Segments covered: MSH, PID, PD1, PV1, ORC, RXO, RXD, RXR, OBX, AL1, IN1
+//
+// Output(s):
+//   FHIR R4 Resources:
+//   Bundle: https://www.hl7.org/fhir/bundle.html
+//   Coverage: https://www.hl7.org/fhir/coverage.html
+//   Encounter: https://www.hl7.org/fhir/encounter.html
+//   MedicationDispense: https://www.hl7.org/fhir/medicationdispense.html
+//   MedicationRequest: https://www.hl7.org/fhir/medicationrequest.html
+//   MessageHeader: https://www.hl7.org/fhir/messageheader.html
+//   Observation: https://www.hl7.org/fhir/observation.html
+//   Patient: https://www.hl7.org/fhir/patient.html
+//   Practitioner: https://www.hl7.org/fhir/practitioner.html
+//   AllergyIntolerance: https://www.hl7.org/fhir/allergyintolerance.html
+//
+// Required for: Pharmacy dispense workflow (RDS = Pharmacy/Treatment Dispense)
+//
+def RDS_O13(RDS_O13) {
+  var MessageHeader: segments::MSH_MessageHeader(RDS_O13.MSH)
+  out Resources: utilities::OutputResourceAndGetReference(MessageHeader)
+
+  var Patient: segments::PID_PD1_Patient(RDS_O13.PATIENT.PID, RDS_O13.PATIENT.PD1)
+  var PatientReference: utilities::OutputResourceAndGetReference(Patient)
+
+  if RDS_O13.PATIENT.PV1 then {
+    var Encounter: segments::PV1_Encounter(RDS_O13.PATIENT.PV1)
+    var Encounter.subject: PatientReference
+    var EncounterReference: utilities::OutputResourceAndGetReference(Encounter)
+  }
+
+  // Allergies
+  if RDS_O13.PATIENT.AL1 then {
+    out Resources: segments::AL1_AllergyIntolerance(RDS_O13.PATIENT.AL1[], PatientReference)
+  }
+
+  // Orders with dispense
+  if RDS_O13.ORDER then {
+    out Resources: RDS_O13_Order(RDS_O13.ORDER[], PatientReference, EncounterReference)
+  }
+
+  // Insurance
+  if RDS_O13.PATIENT.INSURANCE then {
+    out Resources: segments::IN1_Coverage(RDS_O13.PATIENT.INSURANCE[].IN1[], PatientReference)
+  }
+}
+
+def RDS_O13_Order(required ORDER, PatientReference, EncounterReference) {
+  // Pharmacy order → MedicationRequest
+  if ORDER.ORC then {
+    if ORDER.RXO then {
+      var MedicationRequest: segments::RXO_MedicationRequest(ORDER.RXO, PatientReference)
+      var MedRequestReference: utilities::OutputResourceAndGetReference(MedicationRequest)
+    }
+  }
+
+  // Dispense → MedicationDispense
+  if ORDER.RXD then {
+    var MedicationDispense: segments::RXD_MedicationDispense(ORDER.RXD, PatientReference)
+    if MedRequestReference then {
+      var MedicationDispense.authorizingPrescription[]: MedRequestReference
+    }
+    if EncounterReference then {
+      var MedicationDispense.context: EncounterReference
+    }
+    out Resources: utilities::OutputResourceAndGetReference(MedicationDispense)
+  }
+
+  // Observations
+  if ORDER.OBSERVATION then {
+    out Resources: segments::OBX_Observation(ORDER.OBSERVATION[].OBX[], PatientReference)
+  }
+}

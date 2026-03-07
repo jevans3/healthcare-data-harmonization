@@ -1,0 +1,67 @@
+package crd
+
+// Description: Da Vinci CRD v2.1 Coverage Requirements Discovery rules
+//
+// Evaluates CDS Hooks requests to determine coverage requirements.
+// Returns CDS cards indicating documentation or prior auth requirements.
+//
+// Input:
+//   CDS Hooks request payload with:
+//   - hook: "order-select", "order-sign", "appointment-book", "encounter-start"
+//   - context: patient, orders, coverage
+//   - prefetch: patient, coverage resources
+//
+// Output:
+//   CDS Hooks response with cards:
+//   - Documentation required → link to DTR
+//   - Prior authorization required → link to PAS
+//   - Info only → coverage guidance
+//
+// Rules are tenant-specific (payer-specific coverage policies).
+// Override by placing tenant-specific rules in mappings/tenants/<id>/crd_rules.wstl
+
+def CRD_Evaluate(hookRequest) {
+  cards[]: CRD_Evaluate_Order(hookRequest)
+}
+
+def CRD_Evaluate_Order(hookRequest) {
+  // Default rule: check if the ordered service requires prior auth
+  // In production, these rules are loaded from payer-specific configurations
+
+  var context: hookRequest.context
+  var hook: hookRequest.hook
+
+  // Placeholder card indicating rule evaluation
+  summary: "Coverage requirements evaluation"
+  indicator: "info"
+  source.label: "Coverage Requirements Discovery"
+  source.url: "http://hl7.org/fhir/us/davinci-crd"
+
+  // Example: Flag services that commonly require prior auth
+  if hook == "order-sign" then {
+    if context.draftOrders then {
+      detail: "Review coverage requirements for ordered services. Some services may require prior authorization or additional documentation."
+      indicator: "warning"
+
+      // Link to DTR for documentation
+      links[0].label: "Complete Documentation (DTR)"
+      links[0].url: "/fhir/Questionnaire/$questionnaire-package"
+      links[0].type: "smart"
+
+      // Link to PAS for prior auth
+      links[1].label: "Submit Prior Authorization (PAS)"
+      links[1].url: "/fhir/Claim/$submit"
+      links[1].type: "smart"
+    }
+  }
+
+  if hook == "appointment-book" then {
+    detail: "Verify coverage for the scheduled appointment."
+    indicator: "info"
+  }
+
+  if hook == "encounter-start" then {
+    detail: "Coverage verified for this encounter."
+    indicator: "info"
+  }
+}

@@ -16,12 +16,19 @@
 
 package com.google.cloud.verticals.foundations.dataharmonization.plugins.logging;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** Utility functions for logging. */
+/**
+ * Utility functions for logging.
+ *
+ * <p>Uses SLF4J for structured logging integration with Sumo Logic (via Fluent Bit sidecars)
+ * and Grafana (via log-derived metrics). MDC context from TenantInterceptor automatically
+ * includes tenantId and correlationId in all log entries.
+ */
 public class LoggingFns {
 
-  private static final Logger LOGGER = Logger.getLogger(LoggingPlugin.PACKAGE_NAME);
+  private static final Logger LOGGER = LoggerFactory.getLogger(LoggingPlugin.PACKAGE_NAME);
 
   /**
    * Logs the provided message to info logs.
@@ -38,7 +45,7 @@ public class LoggingFns {
    * @param message The message to log.
    */
   public static void logWarning(String message) {
-    LOGGER.warning(message);
+    LOGGER.warn(message);
   }
 
   /**
@@ -47,6 +54,6 @@ public class LoggingFns {
    * @param message The message to log.
    */
   public static void logSevere(String message) {
-    LOGGER.severe(message);
+    LOGGER.error(message);
   }
 }

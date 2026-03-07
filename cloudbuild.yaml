@@ -1,4 +1,35 @@
 steps:
-  - name: gradle:7.6-jdk11
+  # Step 1: Run unit tests (core engine + plugins)
+  - name: gradle:7.6-jdk17
     entrypoint: gradle
     args: ['test']
+
+  # Step 2: Build Spring Boot service JARs
+  - name: gradle:7.6-jdk17
+    entrypoint: gradle
+    args: ['bootJar', '-x', 'test']
+
+  # Step 3: Build Docker images for each service
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'services/transform-service/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/transform-service:$SHORT_SHA', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'services/fhir-server/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/fhir-server:$SHORT_SHA', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'services/prior-auth-service/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/prior-auth-service:$SHORT_SHA', '.']
+
+  # Step 4: Push Docker images
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/transform-service:$SHORT_SHA']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/fhir-server:$SHORT_SHA']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/prior-auth-service:$SHORT_SHA']
+
+  # Step 5: Helm lint (validate chart templates)
+  - name: 'alpine/helm:3.14'
+    args: ['lint', 'deploy/helm']
+
+images:
+  - 'gcr.io/$PROJECT_ID/transform-service:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/fhir-server:$SHORT_SHA'
+  - 'gcr.io/$PROJECT_ID/prior-auth-service:$SHORT_SHA'

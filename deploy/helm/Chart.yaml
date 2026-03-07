@@ -1,0 +1,14 @@
+apiVersion: v2
+name: healthcare-data-harmonization
+description: Healthcare Data Harmonization Platform - Da Vinci/CMS-0057-F compliant
+version: 1.0.0
+appVersion: "1.0.0"
+type: application
+keywords:
+  - healthcare
+  - fhir
+  - hl7v2
+  - davinci
+  - prior-authorization
+  - cms-0057-f
+  - multi-tenant

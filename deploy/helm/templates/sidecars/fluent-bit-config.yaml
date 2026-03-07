@@ -1,0 +1,51 @@
+{{- if .Values.fluentBit.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-fluent-bit-config
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        5
+        Log_Level    info
+        Daemon       off
+        Parsers_File parsers.conf
+
+    [INPUT]
+        Name         tail
+        Path         /var/log/app/*.json
+        Parser       json
+        Tag          app.*
+        Refresh_Interval  10
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+
+    [FILTER]
+        Name         modify
+        Match        app.*
+        Add          service ${SERVICE_NAME}
+        Add          namespace ${POD_NAMESPACE}
+        Add          pod ${POD_NAME}
+        Add          cluster ${CLUSTER_NAME}
+
+    [OUTPUT]
+        Name         http
+        Match        app.*
+        Host         {{ .Values.observability.logging.sumoLogic.endpoint | default "collectors.sumologic.com" }}
+        Port         443
+        URI          /receiver/v1/http/{{ .Values.observability.logging.sumoLogic.endpoint }}
+        Format       json_lines
+        tls          On
+        tls.verify   On
+        Header       X-Sumo-Category {{ .Values.observability.logging.sumoLogic.sourceCategory }}
+        Retry_Limit  5
+
+  parsers.conf: |
+    [PARSER]
+        Name         json
+        Format       json
+        Time_Key     timestamp
+        Time_Format  %Y-%m-%dT%H:%M:%S.%LZ
+{{- end }}

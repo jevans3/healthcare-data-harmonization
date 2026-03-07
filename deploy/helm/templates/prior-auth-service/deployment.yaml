@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-prior-auth-service
+  labels:
+    app: prior-auth-service
+    app.kubernetes.io/name: prior-auth-service
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.priorAuthService.replicaCount }}
+  selector:
+    matchLabels:
+      app: prior-auth-service
+  template:
+    metadata:
+      labels:
+        app: prior-auth-service
+        app.kubernetes.io/name: prior-auth-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8083"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: prior-auth-service
+          image: "{{ .Values.priorAuthService.image.repository }}:{{ .Values.priorAuthService.image.tag }}"
+          imagePullPolicy: {{ .Values.priorAuthService.image.pullPolicy }}
+          ports:
+            - containerPort: 8083
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.database.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: password
+            - name: OAUTH2_ISSUER_URI
+              value: {{ .Values.security.oauth2.issuerUri | quote }}
+          resources:
+            {{- toYaml .Values.priorAuthService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+        {{- if .Values.fluentBit.enabled }}
+        - name: fluent-bit
+          image: "{{ .Values.fluentBit.image.repository }}:{{ .Values.fluentBit.image.tag }}"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+              readOnly: true
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        {{- end }}
+      volumes:
+        - name: log-volume
+          emptyDir: {}
+        {{- if .Values.fluentBit.enabled }}
+        - name: fluent-bit-config
+          configMap:
+            name: {{ .Release.Name }}-fluent-bit-config
+        {{- end }}

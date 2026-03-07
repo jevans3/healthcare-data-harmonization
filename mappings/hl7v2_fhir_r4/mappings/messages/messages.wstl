@@ -37,3 +37,8 @@ import "./SIU_S13.wstl"
 import "./SIU_S14.wstl"
 import "./SIU.wstl"
 import "./VXU_V04.wstl"
+
+// Gap closure message types (billing, pharmacy, financial)
+import "./BAR_P01.wstl"
+import "./DFT_P03.wstl"
+import "./RDS_O13.wstl"

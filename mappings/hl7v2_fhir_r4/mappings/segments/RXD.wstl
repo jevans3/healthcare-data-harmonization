@@ -1,0 +1,41 @@
+package segments
+
+// Description: Constructs a FHIR R4 MedicationDispense Resource based on V2 RXD Segment
+//
+// Argument(s):
+//   RXD V2 Segment (Pharmacy/Treatment Dispense)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//
+// Output(s):
+//   MedicationDispense: https://www.hl7.org/fhir/medicationdispense.html
+//
+// Required for: RDS_O13, RGV_O15 message types (pharmacy dispense/give)
+//
+def RXD_MedicationDispense(required RXD, PatientReference) {
+  status: "completed"
+  medicationCodeableConcept: datatypes::CWE_CodeableConcept(RXD.2)
+  subject: PatientReference
+  whenHandedOver: utilities::Convert_DateTime(RXD.3)
+  quantity.value: if RXD.4 then tryParseNum(RXD.4)
+  quantity.unit: if RXD.5 then datatypes::CWE_Code(RXD.5)
+  quantity.system: "http://unitsofmeasure.org"
+  if RXD.7 then {
+    identifier[]: datatypes::ST_Identifier(RXD.7, "http://terminology.hl7.org/CodeSystem/v2-0203", "RX")
+  }
+  if RXD.8 then {
+    dosageInstruction[0].text: RXD.8
+  }
+  daysSupply.value: if RXD.10 then tryParseNum(RXD.10)
+  if RXD.11 then {
+    substitution.wasSubstituted: true
+    substitution.type: datatypes::CWE_CodeableConcept(RXD.11)
+  }
+  if RXD.14 then {
+    extension[]: utilities::Build_Extension(RXD.14, "string", "http://hl7.org/fhir/StructureDefinition/pharmacy-needsHumanReview")
+  }
+  if RXD.15 then {
+    destination: utilities::OutputResourceAndGetReference(datatypes::CWE_Location(RXD.15[0]))
+  }
+  type: datatypes::CWE_CodeableConcept(RXD.33)
+  resourceType: "MedicationDispense"
+}

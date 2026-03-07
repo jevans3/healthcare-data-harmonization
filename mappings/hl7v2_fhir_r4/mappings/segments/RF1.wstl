@@ -1,0 +1,41 @@
+package segments
+
+// Description: Constructs a FHIR R4 ServiceRequest Resource based on V2 RF1 Segment
+//
+// Argument(s):
+//   RF1 V2 Segment (Referral Information)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//
+// Output(s):
+//   ServiceRequest: https://www.hl7.org/fhir/servicerequest.html (intent: reflex-order)
+//
+// Required for: Referral workflow support
+//
+def RF1_ServiceRequest(required RF1, PatientReference) {
+  status: if RF1.1 then utilities::Convert_TerminologyCode(datatypes::CWE_Code(RF1.1), "HL70283", "Referral_Status") else "active"
+  intent: "reflex-order"
+  priority: if RF1.2 then utilities::Convert_TerminologyCode(datatypes::CWE_Code(RF1.2), "HL70280", "Referral_Priority")
+  category[]: datatypes::CWE_CodeableConcept(RF1.3)
+  code: datatypes::CWE_CodeableConcept(RF1.4)
+  subject: PatientReference
+  if RF1.6 then {
+    identifier[]: datatypes::EI_Identifier(RF1.6, "ORI", "http://terminology.hl7.org/CodeSystem/v2-0203")
+  }
+  if RF1.7 then {
+    occurrenceDateTime: utilities::Convert_DateTime(RF1.7.1)
+    if RF1.7.2 then {
+      occurrencePeriod.start: utilities::Convert_DateTime(RF1.7.1)
+      occurrencePeriod.end: utilities::Convert_DateTime(RF1.7.2)
+    }
+  }
+  if RF1.8 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(RF1.8), "dateTime", "http://hl7.org/fhir/StructureDefinition/referral-expirationDate")
+  }
+  if RF1.9 then {
+    authoredOn: utilities::Convert_DateTime(RF1.9)
+  }
+  if RF1.10 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_CodeableConcept(RF1.10[0]), "CodeableConcept", "http://hl7.org/fhir/StructureDefinition/referral-disposition")
+  }
+  resourceType: "ServiceRequest"
+}

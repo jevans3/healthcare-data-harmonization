@@ -1,0 +1,42 @@
+plugins {
+    id 'java-library'
+}
+
+group 'com.google.cloud.verticals.foundations.dataharmonization.services'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+    api group: "com.google.cloud.verticals.foundations.dataharmonization", name: "runtime"
+
+    // Spring Boot
+    api 'org.springframework.boot:spring-boot-starter-web:3.2.4'
+    api 'org.springframework.boot:spring-boot-starter-actuator:3.2.4'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa:3.2.4'
+    api 'org.springframework.boot:spring-boot-starter-security:3.2.4'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.2.4'
+
+    // Observability
+    api 'io.micrometer:micrometer-registry-prometheus:1.12.4'
+    api 'io.micrometer:micrometer-tracing-bridge-otel:1.2.4'
+    api 'net.logstash.logback:logstash-logback-encoder:7.4'
+
+    // SLF4J (replaces JUL)
+    api 'org.slf4j:slf4j-api:2.0.12'
+    api 'ch.qos.logback:logback-classic:1.4.14'
+
+    // Database
+    api 'org.postgresql:postgresql:42.7.2'
+    api 'org.flywaydb:flyway-core:10.8.1'
+
+    implementation 'com.google.guava:guava:31.0.1-jre'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.4'
+}

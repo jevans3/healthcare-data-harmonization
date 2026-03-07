@@ -1,0 +1,91 @@
+package pas
+
+// Description: Da Vinci PAS v2.1 X12 278 ↔ FHIR Claim translation
+//
+// Translates between FHIR Claim (preauthorization) and X12 278
+// Health Care Services Review request/response formats.
+//
+// CMS-0057-F requires support for X12 278 transaction set for
+// electronic prior authorization interoperability.
+//
+// X12 278 → FHIR Claim mappings:
+//   2010A (Utilization Management Org) → Claim.insurer
+//   2010B (Requester) → Claim.provider
+//   2010C (Subscriber) → Claim.patient
+//   2010D (Dependent) → Claim.patient (if dependent)
+//   2000E (Patient Event) → Claim.item
+//   2000F (Service) → Claim.item.productOrService
+//
+// X12 278 Certification Action Codes → FHIR ClaimResponse.outcome:
+//   A1 (Certified in total) → "complete"
+//   A2 (Certified - modified) → "partial"
+//   A3 (Not certified) → "error"
+//   A4 (Pended) → "queued"
+//   A6 (Modified) → "complete"
+
+def X12_To_FHIR_Claim(x12_278) {
+  resourceType: "Claim"
+  use: "preauthorization"
+  status: "active"
+
+  // 2010A → insurer
+  if x12_278.utilizationManagementOrg then {
+    insurer.display: x12_278.utilizationManagementOrg.name
+    insurer.identifier.value: x12_278.utilizationManagementOrg.id
+  }
+
+  // 2010B → provider
+  if x12_278.requester then {
+    provider.display: x12_278.requester.name
+    provider.identifier.value: x12_278.requester.npi
+    provider.identifier.system: "http://hl7.org/fhir/sid/us-npi"
+  }
+
+  // 2010C/D → patient
+  if x12_278.subscriber then {
+    patient.identifier.value: x12_278.subscriber.memberId
+  }
+
+  // 2000E/F → items
+  if x12_278.services then {
+    item[]: X12_Service_To_Item(x12_278.services[])
+  }
+
+  type.coding[0].system: "http://terminology.hl7.org/CodeSystem/claim-type"
+  type.coding[0].code: "professional"
+}
+
+def X12_Service_To_Item(service) {
+  sequence: service.sequence
+  productOrService.coding[0].system: "http://www.ama-assn.org/go/cpt"
+  productOrService.coding[0].code: service.procedureCode
+  if service.diagnosisCode then {
+    diagnosisSequence[]: service.diagnosisSequence
+  }
+  quantity.value: service.quantity
+  if service.fromDate then {
+    servicedPeriod.start: service.fromDate
+    servicedPeriod.end: service.toDate
+  }
+}
+
+def FHIR_Claim_To_X12(claim) {
+  // Reverse mapping for outbound X12 278 generation
+  transactionSetId: "278"
+  utilizationManagementOrg.name: claim.insurer.display
+  utilizationManagementOrg.id: claim.insurer.identifier.value
+  requester.npi: claim.provider.identifier.value
+  subscriber.memberId: claim.patient.identifier.value
+
+  if claim.item then {
+    services[]: FHIR_Item_To_X12_Service(claim.item[])
+  }
+}
+
+def FHIR_Item_To_X12_Service(item) {
+  sequence: item.sequence
+  procedureCode: item.productOrService.coding[0].code
+  quantity: item.quantity.value
+  fromDate: item.servicedPeriod.start
+  toDate: item.servicedPeriod.end
+}

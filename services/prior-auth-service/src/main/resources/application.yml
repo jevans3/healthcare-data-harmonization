@@ -1,0 +1,45 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: prior-auth-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+
+# Mapping file paths
+mappings:
+  base-path: ${MAPPINGS_BASE_PATH:mappings}
+  tenant-override-path: ${MAPPINGS_TENANT_PATH:mappings/tenants}
+
+# Actuator endpoints for Prometheus scraping and health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: prior-auth-service
+    export:
+      prometheus:
+        enabled: true
+
+# SLA configuration (CMS-0057-F)
+prior-auth:
+  sla:
+    expedited-hours: 72
+    standard-days: 7
+    warning-threshold: 0.9
+    check-interval-minutes: 15
+
+# Multi-tenancy
+multitenancy:
+  tenants: []
+
+# Security
+spring.security.oauth2.resourceserver.jwt:
+  issuer-uri: ${OAUTH2_ISSUER_URI:https://auth.example.com}

@@ -26,6 +26,7 @@ dependencies {
     // TODO(): Set up versioning
     api group: "com.google.cloud.verticals.foundations.dataharmonization", name: "runtime"
     implementation group: "com.google.guava", name: "guava", version: "31.0.1-jre"
+    implementation 'org.slf4j:slf4j-api:2.0.12'
 
     if (gradle.ext.has("annotationProcessorExists") && gradle.ext.annotationProcessorExists){
         annotationProcessor ("com.google.cloud.verticals.foundations.dataharmonization:annotation_processor")

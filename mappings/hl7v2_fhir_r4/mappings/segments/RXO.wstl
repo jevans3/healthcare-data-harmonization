@@ -1,0 +1,41 @@
+package segments
+
+// Description: Constructs a FHIR R4 MedicationRequest Resource based on V2 RXO Segment
+//
+// Argument(s):
+//   RXO V2 Segment (Pharmacy/Treatment Order)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//
+// Output(s):
+//   MedicationRequest: https://www.hl7.org/fhir/medicationrequest.html
+//
+// Required for: OMP_O09, RDS_O13 message types (pharmacy order/dispense)
+//
+def RXO_MedicationRequest(required RXO, PatientReference) {
+  status: "active"
+  intent: "order"
+  medicationCodeableConcept: datatypes::CWE_CodeableConcept(RXO.1)
+  subject: PatientReference
+  dosageInstruction[0].doseAndRate[0].doseQuantity.value: if RXO.2 then tryParseNum(RXO.2)
+  dosageInstruction[0].doseAndRate[0].doseQuantity.unit: if RXO.4 then datatypes::CWE_Code(RXO.4)
+  dosageInstruction[0].doseAndRate[0].doseQuantity.system: "http://unitsofmeasure.org"
+  dosageInstruction[0].doseAndRate[0].rateQuantity.value: if RXO.3 then tryParseNum(RXO.3)
+  dosageInstruction[0].doseAndRate[0].rateQuantity.unit: if RXO.5 then datatypes::CWE_Code(RXO.5)
+  if RXO.6 then {
+    dosageInstruction[0].additionalInstruction[]: datatypes::CWE_CodeableConcept(RXO.6)
+  }
+  if RXO.7 then {
+    dosageInstruction[0].text: RXO.7
+  }
+  dispenseRequest.quantity.value: if RXO.11 then tryParseNum(RXO.11)
+  dispenseRequest.quantity.unit: if RXO.12 then datatypes::CWE_Code(RXO.12)
+  dispenseRequest.numberOfRepeatsAllowed: if RXO.13 then tryParseNum(RXO.13)
+  if RXO.14 then {
+    requester: utilities::OutputResourceAndGetReference(datatypes::XCN_Practitioner(RXO.14[0]))
+  }
+  substitution.allowedBoolean: if RXO.9 then RXO.9 == "Y"
+  if RXO.18 then {
+    dosageInstruction[0].doseAndRate[0].type: datatypes::CWE_CodeableConcept(RXO.18)
+  }
+  resourceType: "MedicationRequest"
+}

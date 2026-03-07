@@ -1,0 +1,15 @@
+{{- if .Values.resourceQuota.enabled }}
+# Resource quota per tenant namespace (ePA pattern)
+# Prevents any single tenant from consuming disproportionate cluster resources
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-tenant-quota
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  hard:
+    requests.cpu: {{ .Values.resourceQuota.cpu | quote }}
+    requests.memory: {{ .Values.resourceQuota.memory | quote }}
+    pods: {{ .Values.resourceQuota.pods | quote }}
+{{- end }}

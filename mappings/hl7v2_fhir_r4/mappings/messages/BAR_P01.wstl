@@ -1,0 +1,73 @@
+package messages
+
+// Description: Define BAR_P01 HL7v2 (version 2.9) to FHIR R4 transformation
+//
+// Argument(s):
+//   BAR_P01 HL7v2 Message Type (version 2.9)
+//   BAR_P01 Segments covered: MSH, PID, PD1, PV1, DG1, PR1, GT1, IN1, IN2, IN3, FT1, ROL, NK1
+//
+// Output(s):
+//   FHIR R4 Resources:
+//   Account: https://www.hl7.org/fhir/account.html
+//   Bundle: https://www.hl7.org/fhir/bundle.html
+//   Claim: https://www.hl7.org/fhir/claim.html
+//   Condition: https://www.hl7.org/fhir/condition.html
+//   Coverage: https://www.hl7.org/fhir/coverage.html
+//   Encounter: https://www.hl7.org/fhir/encounter.html
+//   MessageHeader: https://www.hl7.org/fhir/messageheader.html
+//   Patient: https://www.hl7.org/fhir/patient.html
+//   Practitioner: https://www.hl7.org/fhir/practitioner.html
+//   PractitionerRole: https://www.hl7.org/fhir/practitionerrole.html
+//   Procedure: https://www.hl7.org/fhir/procedure.html
+//   RelatedPerson: https://www.hl7.org/fhir/relatedperson.html
+//
+// Required for: Billing/account management workflows
+//
+def BAR_P01(BAR_P01) {
+  var MessageHeader: segments::MSH_MessageHeader(BAR_P01.MSH)
+  out Resources: utilities::OutputResourceAndGetReference(MessageHeader)
+
+  var Patient: segments::PID_PD1_Patient(BAR_P01.VISIT[0].PID, BAR_P01.VISIT[0].PD1)
+  var PatientReference: utilities::OutputResourceAndGetReference(Patient)
+
+  if BAR_P01.VISIT[0].PV1 then {
+    var Encounter: segments::PV1_Encounter(BAR_P01.VISIT[0].PV1, BAR_P01.VISIT[0].PV2)
+    var Encounter.subject: PatientReference
+    var EncounterReference: utilities::OutputResourceAndGetReference(Encounter)
+  }
+
+  // Diagnoses
+  if BAR_P01.VISIT[0].DG1 then {
+    out Resources: segments::DG1_Condition(BAR_P01.VISIT[0].DG1[], PatientReference, EncounterReference)
+  }
+
+  // Procedures
+  if BAR_P01.VISIT[0].PROCEDURE then {
+    out Resources: segments::PR1_Procedure(BAR_P01.VISIT[0].PROCEDURE[].PR1[], PatientReference)
+  }
+
+  // Insurance
+  if BAR_P01.VISIT[0].INSURANCE then {
+    out Resources: segments::IN1_Coverage(BAR_P01.VISIT[0].INSURANCE[].IN1[], PatientReference)
+  }
+
+  // Financial transactions
+  if BAR_P01.VISIT[0].FT1 then {
+    out Resources: segments::FT1_Claim(BAR_P01.VISIT[0].FT1[], PatientReference, EncounterReference)
+  }
+
+  // Guarantors
+  if BAR_P01.VISIT[0].GT1 then {
+    out Resources: segments::GT1_Account(BAR_P01.VISIT[0].GT1[], PatientReference)
+  }
+
+  // Next of kin
+  if BAR_P01.VISIT[0].NK1 then {
+    out Resources: segments::NK1_RelatedPerson(BAR_P01.VISIT[0].NK1[], PatientReference)
+  }
+
+  // Provider roles
+  if BAR_P01.VISIT[0].ROL then {
+    out Resources: segments::ROL_PractitionerRole(BAR_P01.VISIT[0].ROL[])
+  }
+}

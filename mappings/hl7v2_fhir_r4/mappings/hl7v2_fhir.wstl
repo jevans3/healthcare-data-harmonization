@@ -72,6 +72,13 @@ def HL7v2_FHIR(message) {
     var msgType: "SIU_S14"
   } else if message.VXU_V04? then {
     var msgType: "VXU_V04"
+  // Gap closure: billing, financial, pharmacy message types
+  } else if message.BAR_P01? then {
+    var msgType: "BAR_P01"
+  } else if message.DFT_P03? then {
+    var msgType: "DFT_P03"
+  } else if message.RDS_O13? then {
+    var msgType: "RDS_O13"
   }
 
   if msgType then {

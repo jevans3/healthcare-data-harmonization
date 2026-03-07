@@ -1,0 +1,137 @@
+# Healthcare Data Harmonization Platform - Helm Values
+# Da Vinci Burden Reduction IGs 2.1 / CMS-0057-F / Multi-Tenant EKS
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  tenant:
+    # Hybrid multi-tenancy: schema-per-tenant + namespace-per-tenant (ePA pattern)
+    isolation: hybrid  # hybrid | namespace-only | schema-only
+
+# Transform Service - HL7v2 → FHIR R4 transformations
+transformService:
+  replicaCount: 2
+  image:
+    repository: healthcare-harmonization/transform-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8081
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# FHIR Server - Da Vinci operations (PAS, DTR, CRD, CDex)
+fhirServer:
+  replicaCount: 2
+  image:
+    repository: healthcare-harmonization/fhir-server
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8082
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+
+# Prior Auth Service - CMS-0057-F compliance
+priorAuthService:
+  replicaCount: 2
+  image:
+    repository: healthcare-harmonization/prior-auth-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8083
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+# Database (PostgreSQL with per-tenant schemas)
+database:
+  host: postgresql
+  port: 5432
+  name: harmonization
+  username: app_user
+  existingSecret: db-credentials
+
+# Observability - Infor stack integration
+observability:
+  # Logging → Sumo Logic via Fluent Bit sidecar
+  logging:
+    enabled: true
+    sumoLogic:
+      endpoint: ""  # Sumo Logic HTTP source endpoint
+      sourceCategory: "healthcare/harmonization"
+
+  # Metrics → Prometheus → Grafana
+  metrics:
+    enabled: true
+    prometheus:
+      scrapeInterval: 15s
+      path: /actuator/prometheus
+      port: 8080
+
+  # Alerting → PagerDuty via Grafana
+  alerting:
+    enabled: true
+    pagerDuty:
+      serviceKey: ""  # PagerDuty service integration key
+      routingKey: ""  # PagerDuty routing key
+
+# Fluent Bit sidecar configuration for log scraping
+fluentBit:
+  enabled: true
+  image:
+    repository: fluent/fluent-bit
+    tag: "2.2"
+  config:
+    logPath: /var/log/app/*.json
+    sumoLogicEndpoint: ""
+
+# Network policies for tenant isolation
+networkPolicy:
+  enabled: true
+
+# Resource quotas per tenant namespace
+resourceQuota:
+  enabled: true
+  cpu: "16"
+  memory: "32Gi"
+  pods: "50"
+
+# OAuth2 / SMART on FHIR
+security:
+  oauth2:
+    issuerUri: ""
+    jwksUri: ""

@@ -1,0 +1,16 @@
+{{- if .Values.observability.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ .Release.Name }}-transform-service
+  labels:
+    app: transform-service
+spec:
+  selector:
+    matchLabels:
+      app: transform-service
+  podMetricsEndpoints:
+    - port: http
+      path: {{ .Values.observability.metrics.prometheus.path }}
+      interval: {{ .Values.observability.metrics.prometheus.scrapeInterval }}
+{{- end }}

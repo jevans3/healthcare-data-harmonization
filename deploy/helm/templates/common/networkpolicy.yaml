@@ -1,0 +1,62 @@
+{{- if .Values.networkPolicy.enabled }}
+# Network policy for tenant namespace isolation (ePA pattern)
+# Each tenant namespace gets this policy to restrict cross-tenant traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-tenant-isolation
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic within the same namespace (same tenant)
+    - from:
+        - podSelector: {}
+    # Allow traffic from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+    # Allow Prometheus scraping from monitoring namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - port: 8081
+        - port: 8082
+        - port: 8083
+  egress:
+    # Allow traffic within the same namespace
+    - to:
+        - podSelector: {}
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Allow traffic to shared database
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform
+      ports:
+        - port: {{ .Values.database.port }}
+    # Allow external HTTPS (for OAuth2 token validation, Sumo Logic)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 443
+{{- end }}
