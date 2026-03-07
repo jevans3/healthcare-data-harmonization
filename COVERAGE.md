@@ -53,9 +53,23 @@ Account, AllergyIntolerance, Appointment, Bundle, Condition, Coverage, Diagnosti
 
 | Conversion | Resource Count | Direction |
 |---|---|---|
-| **R3 to R4** | 149 resources | Bidirectional |
+| **R3 to R4** | 149 resources (117 fully mapped, 32 stubs) | Bidirectional |
 | **R2 to R3** | 114 resources | Bidirectional |
-| **R4 to R5** | Not supported | - |
+| **R4B / R5** | Not supported | - |
+
+### R3-R4 Stub Resources (32 — new in R4 with no R3 equivalent)
+
+BiologicallyDerivedProduct, CatalogEntry, ChargeItemDefinition, CoverageEligibilityRequest, CoverageEligibilityResponse, DeviceDefinition, EffectEvidenceSynthesis, EventDefinition, Evidence, EvidenceVariable, ExampleScenario, ImmunizationEvaluation, InsurancePlan, Invoice, MedicationKnowledge, MedicinalProduct, MedicinalProductAuthorization, MedicinalProductContraindication, MedicinalProductIndication, MedicinalProductIngredient, MedicinalProductInteraction, MedicinalProductManufactured, MedicinalProductPackaged, MedicinalProductPharmaceutical, MedicinalProductUndesirableEffect, ObservationDefinition, OrganizationAffiliation, ResearchDefinition, ResearchElementDefinition, RiskEvidenceSynthesis, SpecimenDefinition, SubstancePolymer, SubstanceProtein, SubstanceReferenceInformation, SubstanceSourceMaterial, SubstanceSpecification, TerminologyCapabilities, VerificationResult
+
+### Version Conversion Limitations
+
+- **Code value set changes**: Stored as extensions rather than smart value set translation
+- **Reference target type changes**: Directly copied without validation
+- **Missing required fields**: May produce technically invalid resources
+- **Nested/contained resources**: Directly copied without version conversion in some cases
+- **Top-level extensions**: Directly copied without field-level conversion
+- **Sub-level extensions**: Completely ignored (data loss possible)
+- **Modifier extensions**: Not specifically converted
 
 ---
 
@@ -131,3 +145,17 @@ Several fields use hard-coded defaults or lack full ConceptMap coverage:
 ### Known TODOs in Code
 
 - NTE segment parser has a known investigation issue (`mappings/hl7v2_fhir_r4/mappings/datatypes/NTE.wstl`)
+
+---
+
+## Legacy Whistle v1 Mappings (wstl1/ — deprecated)
+
+The `wstl1/` directory contains additional mapping configurations using the deprecated Whistle v1 language:
+
+- **OMOP to FHIR STU3/R4** — Person, DrugExposure, ConditionOccurrence, ProcedureOccurrence, VisitOccurrence, Provider, Specimen, Observation
+- **FHIR to OMOP** — Reverse mapping
+- **CDA to FHIR R4** — Clinical Document Architecture conversion
+- **CPCDS to FHIR R4** — Claims data (Organization, PractitionerRole, Claims)
+- **DICOM to FHIR R4** — Imaging study metadata (ImagingStudy)
+
+These are not actively maintained and are included for backwards compatibility only.
