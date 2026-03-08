@@ -1,0 +1,38 @@
+package segments
+
+// Description: Constructs a FHIR R4 Claim Resource (use: preauthorization) based on V2 AUT Segment
+//
+// Argument(s):
+//   AUT V2 Segment (Authorization Information)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//   CoverageReference already constructed through IN1_Coverage Projector
+//
+// Output(s):
+//   Claim: https://www.hl7.org/fhir/claim.html (use: preauthorization)
+//
+// Da Vinci PAS v2.1: This segment maps to the prior authorization Claim resource
+// CMS-0057-F: Supports the Prior Authorization API requirements
+//
+def AUT_Claim(required AUT, PatientReference, CoverageReference) {
+  use: "preauthorization"
+  status: "active"
+  type: datatypes::CWE_CodeableConcept(AUT.1)
+  identifier[0]: datatypes::CWE_Identifier(AUT.2)
+  identifier[0].type.text: if AUT.2 then "Authorization Number"
+  created: utilities::Convert_DateTime(AUT.4)
+  if AUT.5 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(AUT.5), "dateTime", "http://hl7.org/fhir/StructureDefinition/claim-authorizationStart")
+  }
+  if AUT.6 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(AUT.6), "dateTime", "http://hl7.org/fhir/StructureDefinition/claim-authorizationEnd")
+  }
+  if AUT.8 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(AUT.8), "dateTime", "http://hl7.org/fhir/StructureDefinition/claim-requestedDate")
+  }
+  patient: PatientReference
+  insurance[0].coverage: CoverageReference
+  insurance[0].focal: true
+  insurance[0].sequence: 1
+  provider: if AUT.3 then utilities::OutputResourceAndGetReference(datatypes::XCN_Practitioner(AUT.3[0]))
+  resourceType: "Claim"
+}

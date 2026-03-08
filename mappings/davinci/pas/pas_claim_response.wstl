@@ -1,0 +1,71 @@
+package pas
+
+// Description: Da Vinci PAS v2.1 ClaimResponse construction
+//
+// Constructs a FHIR ClaimResponse from payer authorization decision.
+// Maps X12 278 response fields to FHIR ClaimResponse elements.
+//
+// Input:
+//   Payer decision data (after X12 translation or direct decision)
+//
+// Output:
+//   FHIR ClaimResponse conformant to PAS IG profile
+//
+// Profile: http://hl7.org/fhir/us/davinci-pas/StructureDefinition/profile-claimresponse
+// CMS-0057-F: Response includes denial reasons and authorization numbers
+
+def PAS_Build_ClaimResponse(decision) {
+  resourceType: "ClaimResponse"
+  status: "active"
+  type: decision.type
+  use: "preauthorization"
+  patient: decision.patient
+  created: currentTime("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+  insurer: decision.insurer
+  request: decision.claimReference
+
+  // Authorization outcome
+  outcome: decision.outcome
+
+  // Authorization number (if approved or modified)
+  if decision.authorizationNumber then {
+    preAuthRef: decision.authorizationNumber
+    preAuthPeriod.start: decision.effectiveStart
+    preAuthPeriod.end: decision.effectiveEnd
+  }
+
+  // Item-level adjudication
+  if decision.items then {
+    item[]: PAS_ClaimResponse_Item(decision.items[])
+  }
+
+  // Denial/modification reasons
+  if decision.denialReasons then {
+    error[]: PAS_ClaimResponse_Error(decision.denialReasons[])
+  }
+
+  // Extension: review action (approve, deny, pend, modify)
+  extension[]: {
+    url: "http://hl7.org/fhir/us/davinci-pas/StructureDefinition/extension-reviewAction"
+    extension[0].url: "http://hl7.org/fhir/us/davinci-pas/StructureDefinition/extension-reviewActionCode"
+    extension[0].valueCodeableConcept: decision.reviewAction
+  }
+}
+
+def PAS_ClaimResponse_Item(item) {
+  itemSequence: item.sequence
+  adjudication[0].category.coding[0].system: "http://terminology.hl7.org/CodeSystem/adjudication"
+  adjudication[0].category.coding[0].code: "submitted"
+  adjudication[0].amount.value: item.amount
+  adjudication[0].amount.currency: "USD"
+  if item.denialReason then {
+    adjudication[].category.coding[0].code: "denied"
+    adjudication[].reason: item.denialReason
+  }
+}
+
+def PAS_ClaimResponse_Error(reason) {
+  code.coding[0].system: "http://hl7.org/fhir/us/davinci-pas/CodeSystem/X12-278-reject-reason"
+  code.coding[0].code: reason.code
+  code.coding[0].display: reason.description
+}

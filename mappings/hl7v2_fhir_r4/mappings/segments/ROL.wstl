@@ -1,0 +1,61 @@
+package segments
+
+// Description: Constructs a FHIR R4 PractitionerRole Resource based on V2 ROL Segment
+//
+// Argument(s):
+//   ROL V2 Segment (Role)
+//
+// Output(s):
+//   PractitionerRole: https://www.hl7.org/fhir/practitionerrole.html
+//   Practitioner: https://www.hl7.org/fhir/practitioner.html
+//
+// Required for: Da Vinci CDex (provider roles in clinical data exchange)
+//
+def ROL_PractitionerRole(required ROL) {
+  if ROL.4 then {
+    var Practitioner: datatypes::XCN_Practitioner(ROL.4[0])
+    var Practitioner.address[]: datatypes::XAD_Address(ROL.11[])
+    var Practitioner.telecom[]: datatypes::XTN_ContactPoint(ROL.12[], "work")
+    practitioner: utilities::OutputResourceAndGetReference(Practitioner)
+  }
+  code[]: datatypes::CWE_CodeableConcept(ROL.3)
+  if ROL.5 then {
+    period.start: utilities::Convert_DateTime(ROL.5)
+  }
+  if ROL.6 then {
+    period.end: utilities::Convert_DateTime(ROL.6)
+  }
+  if ROL.9 then {
+    location[]: utilities::OutputResourceAndGetReference(datatypes::CWE_Location(ROL.9[0]))
+  }
+  if ROL.10 then {
+    organization: utilities::OutputResourceAndGetReference(datatypes::XON_Organization(ROL.10[0]))
+  }
+  active: true
+  resourceType: "PractitionerRole"
+}
+
+// Description: Constructs a FHIR R4 CareTeam member based on V2 ROL Segment
+//
+// Argument(s):
+//   ROL V2 Segment (Role)
+//   PatientReference
+//
+// Output(s):
+//   CareTeam: https://www.hl7.org/fhir/careteam.html
+//
+def ROL_CareTeam(required ROL, PatientReference) {
+  status: "active"
+  subject: PatientReference
+  participant[0].role[]: datatypes::CWE_CodeableConcept(ROL.3)
+  if ROL.4 then {
+    participant[0].member: utilities::OutputResourceAndGetReference(datatypes::XCN_Practitioner(ROL.4[0]))
+  }
+  if ROL.5 then {
+    participant[0].period.start: utilities::Convert_DateTime(ROL.5)
+  }
+  if ROL.6 then {
+    participant[0].period.end: utilities::Convert_DateTime(ROL.6)
+  }
+  resourceType: "CareTeam"
+}

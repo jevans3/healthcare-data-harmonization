@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Structured JSON logging configuration for Sumo Logic ingestion.
+
+  Log pipeline:
+  1. Application logs via SLF4J → Logback
+  2. JSON-encoded output to /var/log/app/application.json (EKS) or stdout (local)
+  3. Fluent Bit sidecar in EKS tails log files → Sumo Logic HTTP source
+  4. Sumo Logic indexes with tenant/correlation/service metadata
+
+  MDC fields included in every log entry:
+  - tenantId: from TenantInterceptor
+  - correlationId: from X-Correlation-ID header
+  - messageType: HL7v2 message type being processed
+  - fhirResourceType: FHIR resource type being generated
+  - mappingType: Whistle mapping type being executed
+-->
+<configuration>
+
+  <springProfile name="!production">
+    <!-- Console output for local development -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdcKeyName>tenantId</includeMdcKeyName>
+        <includeMdcKeyName>correlationId</includeMdcKeyName>
+        <includeMdcKeyName>messageType</includeMdcKeyName>
+        <includeMdcKeyName>fhirResourceType</includeMdcKeyName>
+        <includeMdcKeyName>mappingType</includeMdcKeyName>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="CONSOLE" />
+    </root>
+  </springProfile>
+
+  <springProfile name="production">
+    <!-- File output for Fluent Bit sidecar scraping in EKS -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>/var/log/app/application.json</file>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>/var/log/app/application.%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+        <maxFileSize>100MB</maxFileSize>
+        <maxHistory>7</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
+      </rollingPolicy>
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdcKeyName>tenantId</includeMdcKeyName>
+        <includeMdcKeyName>correlationId</includeMdcKeyName>
+        <includeMdcKeyName>messageType</includeMdcKeyName>
+        <includeMdcKeyName>fhirResourceType</includeMdcKeyName>
+        <includeMdcKeyName>mappingType</includeMdcKeyName>
+      </encoder>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="FILE" />
+    </root>
+  </springProfile>
+
+</configuration>

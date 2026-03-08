@@ -1,0 +1,42 @@
+package segments
+
+// Description: Extends FHIR R4 Coverage Resource with additional insurance data from V2 IN2 Segment
+//
+// Argument(s):
+//   IN2 V2 Segment (Insurance Additional Information)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//
+// Output(s):
+//   Coverage extensions: https://www.hl7.org/fhir/coverage.html
+//
+// Required for: Extended insurance detail for Da Vinci PAS/CMS-0057-F coverage validation
+//
+def IN2_Coverage_Extension(required IN2, PatientReference) {
+  if IN2.1 then {
+    extension[]: utilities::Build_Extension(IN2.1, "string", "http://hl7.org/fhir/StructureDefinition/coverage-insuredId")
+  }
+  if IN2.2 then {
+    extension[]: utilities::Build_Extension(IN2.2, "string", "http://hl7.org/fhir/StructureDefinition/coverage-socialSecurityNumber")
+  }
+  if IN2.6 then {
+    extension[]: utilities::Build_Extension(IN2.6, "string", "http://hl7.org/fhir/StructureDefinition/coverage-medicareBeneficiaryId")
+  }
+  if IN2.8 then {
+    extension[]: utilities::Build_Extension(IN2.8, "string", "http://hl7.org/fhir/StructureDefinition/coverage-medicaidCaseNumber")
+  }
+  if IN2.9 then {
+    extension[]: utilities::Build_Extension(datatypes::XPN_HumanName(IN2.9[0]), "HumanName", "http://hl7.org/fhir/StructureDefinition/coverage-militarySponsorName")
+  }
+  if IN2.14 then {
+    extension[]: utilities::Build_Extension(IN2.14, "string", "http://hl7.org/fhir/StructureDefinition/coverage-militaryStatus")
+  }
+  if IN2.25 then {
+    class[]: {
+      type: datatypes::Build_CodeableConcept("policy", "http://hl7.org/fhir/ValueSet/coverage-class", "", "")
+      value: IN2.25
+    }
+  }
+  if IN2.61 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_CodeableConcept(IN2.61), "CodeableConcept", "http://hl7.org/fhir/StructureDefinition/coverage-patientRelationship")
+  }
+}

@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-transform-service
+  labels:
+    app: transform-service
+    app.kubernetes.io/name: transform-service
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.transformService.replicaCount }}
+  selector:
+    matchLabels:
+      app: transform-service
+  template:
+    metadata:
+      labels:
+        app: transform-service
+        app.kubernetes.io/name: transform-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: transform-service
+          image: "{{ .Values.transformService.image.repository }}:{{ .Values.transformService.image.tag }}"
+          imagePullPolicy: {{ .Values.transformService.image.pullPolicy }}
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: MAPPINGS_BASE_PATH
+              value: "/app/mappings"
+            - name: OAUTH2_ISSUER_URI
+              value: {{ .Values.security.oauth2.issuerUri | quote }}
+          resources:
+            {{- toYaml .Values.transformService.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          volumeMounts:
+            - name: mappings
+              mountPath: /app/mappings
+              readOnly: true
+            - name: log-volume
+              mountPath: /var/log/app
+        {{- if .Values.fluentBit.enabled }}
+        # Fluent Bit sidecar for log scraping → Sumo Logic
+        - name: fluent-bit
+          image: "{{ .Values.fluentBit.image.repository }}:{{ .Values.fluentBit.image.tag }}"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+              readOnly: true
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        {{- end }}
+      volumes:
+        - name: mappings
+          configMap:
+            name: {{ .Release.Name }}-mappings
+        - name: log-volume
+          emptyDir: {}
+        {{- if .Values.fluentBit.enabled }}
+        - name: fluent-bit-config
+          configMap:
+            name: {{ .Release.Name }}-fluent-bit-config
+        {{- end }}

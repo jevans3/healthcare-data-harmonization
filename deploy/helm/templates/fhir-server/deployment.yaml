@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-fhir-server
+  labels:
+    app: fhir-server
+    app.kubernetes.io/name: fhir-server
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.fhirServer.replicaCount }}
+  selector:
+    matchLabels:
+      app: fhir-server
+  template:
+    metadata:
+      labels:
+        app: fhir-server
+        app.kubernetes.io/name: fhir-server
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      containers:
+        - name: fhir-server
+          image: "{{ .Values.fhirServer.image.repository }}:{{ .Values.fhirServer.image.tag }}"
+          imagePullPolicy: {{ .Values.fhirServer.image.pullPolicy }}
+          ports:
+            - containerPort: 8082
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ .Values.database.username | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecret }}
+                  key: password
+            - name: MAPPINGS_BASE_PATH
+              value: "/app/mappings"
+            - name: OAUTH2_ISSUER_URI
+              value: {{ .Values.security.oauth2.issuerUri | quote }}
+          resources:
+            {{- toYaml .Values.fhirServer.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          volumeMounts:
+            - name: mappings
+              mountPath: /app/mappings
+              readOnly: true
+            - name: log-volume
+              mountPath: /var/log/app
+        {{- if .Values.fluentBit.enabled }}
+        - name: fluent-bit
+          image: "{{ .Values.fluentBit.image.repository }}:{{ .Values.fluentBit.image.tag }}"
+          volumeMounts:
+            - name: log-volume
+              mountPath: /var/log/app
+              readOnly: true
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        {{- end }}
+      volumes:
+        - name: mappings
+          configMap:
+            name: {{ .Release.Name }}-mappings
+        - name: log-volume
+          emptyDir: {}
+        {{- if .Values.fluentBit.enabled }}
+        - name: fluent-bit-config
+          configMap:
+            name: {{ .Release.Name }}-fluent-bit-config
+        {{- end }}

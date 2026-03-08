@@ -19,6 +19,12 @@ include 'runtime'
 include 'transpiler'
 include 'testutil'
 
+// Spring Boot microservices (Da Vinci / CMS-0057-F / Multi-tenant)
+include 'services:common'
+include 'services:transform-service'
+include 'services:fhir-server'
+include 'services:prior-auth-service'
+
 buildCache {
     local {
         directory = new File(rootDir, 'build_cache')

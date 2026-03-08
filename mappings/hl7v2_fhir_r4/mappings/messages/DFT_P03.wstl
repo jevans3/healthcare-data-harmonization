@@ -1,0 +1,76 @@
+package messages
+
+// Description: Define DFT_P03 HL7v2 (version 2.9) to FHIR R4 transformation
+//
+// Argument(s):
+//   DFT_P03 HL7v2 Message Type (version 2.9)
+//   DFT_P03 Segments covered: MSH, PID, PD1, PV1, FT1, PR1, DG1, GT1, IN1, IN2, IN3, OBX, ROL
+//
+// Output(s):
+//   FHIR R4 Resources:
+//   Account: https://www.hl7.org/fhir/account.html
+//   Bundle: https://www.hl7.org/fhir/bundle.html
+//   Claim: https://www.hl7.org/fhir/claim.html
+//   ChargeItem: https://www.hl7.org/fhir/chargeitem.html
+//   Condition: https://www.hl7.org/fhir/condition.html
+//   Coverage: https://www.hl7.org/fhir/coverage.html
+//   Encounter: https://www.hl7.org/fhir/encounter.html
+//   MessageHeader: https://www.hl7.org/fhir/messageheader.html
+//   Observation: https://www.hl7.org/fhir/observation.html
+//   Patient: https://www.hl7.org/fhir/patient.html
+//   Practitioner: https://www.hl7.org/fhir/practitioner.html
+//   PractitionerRole: https://www.hl7.org/fhir/practitionerrole.html
+//   Procedure: https://www.hl7.org/fhir/procedure.html
+//
+// Required for: Financial transaction processing, billing workflows
+//
+def DFT_P03(DFT_P03) {
+  var MessageHeader: segments::MSH_MessageHeader(DFT_P03.MSH)
+  out Resources: utilities::OutputResourceAndGetReference(MessageHeader)
+
+  var Patient: segments::PID_PD1_Patient(DFT_P03.COMMON.PID, DFT_P03.COMMON.PD1)
+  var PatientReference: utilities::OutputResourceAndGetReference(Patient)
+
+  if DFT_P03.COMMON.PV1 then {
+    var Encounter: segments::PV1_Encounter(DFT_P03.COMMON.PV1, DFT_P03.COMMON.PV2)
+    var Encounter.subject: PatientReference
+    var EncounterReference: utilities::OutputResourceAndGetReference(Encounter)
+  }
+
+  // Financial transactions → Claim and ChargeItem resources
+  if DFT_P03.FINANCIAL then {
+    var FT1: DFT_P03.FINANCIAL[].FT1
+    out Resources: segments::FT1_Claim(FT1[], PatientReference, EncounterReference)
+    out Resources: segments::FT1_ChargeItem(FT1[], PatientReference, EncounterReference)
+  }
+
+  // Procedures
+  if DFT_P03.COMMON.PR1 then {
+    out Resources: segments::PR1_Procedure(DFT_P03.COMMON.PR1[], PatientReference)
+  }
+
+  // Diagnoses
+  if DFT_P03.COMMON.DG1 then {
+    out Resources: segments::DG1_Condition(DFT_P03.COMMON.DG1[], PatientReference, EncounterReference)
+  }
+
+  // Insurance
+  if DFT_P03.INSURANCE then {
+    out Resources: segments::IN1_Coverage(DFT_P03.INSURANCE[].IN1[], PatientReference)
+  }
+
+  // Observations
+  if DFT_P03.COMMON.OBX then {
+    out Resources: segments::OBX_Observation(DFT_P03.COMMON.OBX[], PatientReference)
+  }
+
+  // Provider roles
+  if DFT_P03.COMMON.ROL then {
+    out Resources: segments::ROL_PractitionerRole(DFT_P03.COMMON.ROL[])
+  }
+
+  // Guarantors
+  if DFT_P03.COMMON.GT1 then {
+    out Resources: segments::GT1_Account(DFT_P03.COMMON.GT1[], PatientReference)
+  }
+}

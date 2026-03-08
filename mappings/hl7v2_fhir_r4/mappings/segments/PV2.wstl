@@ -1,0 +1,39 @@
+package segments
+
+// Description: Extends FHIR R4 Encounter Resource with additional visit data from V2 PV2 Segment
+//
+// Argument(s):
+//   PV2 V2 Segment (Patient Visit - Additional Information)
+//
+// Output(s):
+//   Encounter extensions: https://www.hl7.org/fhir/encounter.html
+//
+def PV2_Encounter_Extension(required PV2) {
+  if PV2.1 then {
+    extension[]: utilities::Build_Extension(datatypes::PL_Location(PV2.1), "Reference", "http://hl7.org/fhir/StructureDefinition/encounter-priorLocation")
+  }
+  if PV2.3 then {
+    reasonCode[]: datatypes::CWE_CodeableConcept(PV2.3)
+  }
+  if PV2.8 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(PV2.8), "dateTime", "http://hl7.org/fhir/StructureDefinition/encounter-expectedAdmitDate")
+  }
+  if PV2.9 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(PV2.9), "dateTime", "http://hl7.org/fhir/StructureDefinition/encounter-expectedDischargeDate")
+  }
+  if PV2.12 then {
+    extension[]: utilities::Build_Extension(PV2.12, "string", "http://hl7.org/fhir/StructureDefinition/encounter-visitDescription")
+  }
+  if PV2.13 then {
+    extension[]: utilities::Build_Extension(datatypes::XCN_Practitioner(PV2.13[0]), "Reference", "http://hl7.org/fhir/StructureDefinition/encounter-referralSource")
+  }
+  if PV2.22 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_CodeableConcept(PV2.22), "CodeableConcept", "http://hl7.org/fhir/StructureDefinition/encounter-visitPriorityCode")
+  }
+  if PV2.25 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_CodeableConcept(PV2.25), "CodeableConcept", "http://hl7.org/fhir/StructureDefinition/encounter-visitProtectionIndicator")
+  }
+  if PV2.38 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_CodeableConcept(PV2.38), "CodeableConcept", "http://hl7.org/fhir/StructureDefinition/encounter-modeOfArrival")
+  }
+}

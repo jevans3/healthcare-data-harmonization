@@ -1,0 +1,44 @@
+package segments
+
+// Description: Constructs FHIR R4 Coverage certification extensions from V2 IN3 Segment
+//
+// Argument(s):
+//   IN3 V2 Segment (Insurance Additional Information - Certification)
+//   PatientReference already constructed through PID_PD1_Patient Projector
+//
+// Output(s):
+//   Coverage certification extensions: https://www.hl7.org/fhir/coverage.html
+//   Claim (preauthorization reference): https://www.hl7.org/fhir/claim.html
+//
+// Required for: Prior auth certification tracking (CMS-0057-F)
+//
+def IN3_Coverage_Certification(required IN3, PatientReference) {
+  if IN3.1 then {
+    extension[]: utilities::Build_Extension(IN3.1, "string", "http://hl7.org/fhir/StructureDefinition/coverage-certificationSetId")
+  }
+  if IN3.2 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_Code(IN3.2), "string", "http://hl7.org/fhir/StructureDefinition/coverage-certificationNumber")
+  }
+  if IN3.3 then {
+    extension[]: utilities::Build_Extension(datatypes::XCN_Practitioner(IN3.3[0]), "Reference", "http://hl7.org/fhir/StructureDefinition/coverage-certifiedBy")
+  }
+  if IN3.4 then {
+    extension[]: utilities::Build_Extension(IN3.4, "boolean", "http://hl7.org/fhir/StructureDefinition/coverage-certificationRequired")
+  }
+  if IN3.7 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(IN3.7.1), "dateTime", "http://hl7.org/fhir/StructureDefinition/coverage-certificationBeginDate")
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(IN3.7.2), "dateTime", "http://hl7.org/fhir/StructureDefinition/coverage-certificationEndDate")
+  }
+  if IN3.8 then {
+    extension[]: utilities::Build_Extension(datatypes::XCN_Practitioner(IN3.8[0]), "Reference", "http://hl7.org/fhir/StructureDefinition/coverage-physician")
+  }
+  if IN3.14 then {
+    extension[]: utilities::Build_Extension(datatypes::XCN_Practitioner(IN3.14[0]), "Reference", "http://hl7.org/fhir/StructureDefinition/coverage-physicianReviewer")
+  }
+  if IN3.20 then {
+    extension[]: utilities::Build_Extension(datatypes::CWE_CodeableConcept(IN3.20), "CodeableConcept", "http://hl7.org/fhir/StructureDefinition/coverage-preAuthDecision")
+  }
+  if IN3.21 then {
+    extension[]: utilities::Build_Extension(utilities::Convert_DateTime(IN3.21), "dateTime", "http://hl7.org/fhir/StructureDefinition/coverage-preAuthDecisionDate")
+  }
+}

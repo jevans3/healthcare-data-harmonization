@@ -1,0 +1,20 @@
+// Parent build configuration for all Spring Boot services
+// Shared dependency versions and plugin configuration
+
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:3.2.4'
+    }
+}
+
+ext {
+    springBootVersion = '3.2.4'
+    hapiFhirVersion = '7.0.2'
+    micrometerVersion = '1.12.4'
+    logbackVersion = '1.4.14'
+    slf4jVersion = '2.0.12'
+}
